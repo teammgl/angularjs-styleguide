@@ -23,14 +23,15 @@ You can find the old styleguide [here](https://github.com/toddmotto/angular-styl
 1. [Modular architecture](#modular-architecture)
     1. [Theory](#module-theory)
     1. [Root module](#root-module)
-    1. [Component module](#component-module)
+    1. [Framework module](#framework-module)
     1. [Common module](#common-module)
-    1. [Low-level modules](#low-level-modules)
+    1. [Feature modules](#feature-modules)
     1. [File naming conventions](#file-naming-conventions)
     1. [Scalable file structure](#scalable-file-structure)
 1. [Components](#components)
     1. [Theory](#component-theory)
     1. [Supported properties](#supported-properties)
+    1. [Namespacing](#namespacing)
     1. [Controllers](#controllers)
     1. [One-way dataflow and Events](#one-way-dataflow-and-events)
     1. [Stateful Components](#stateful-components)
@@ -43,6 +44,7 @@ You can find the old styleguide [here](https://github.com/toddmotto/angular-styl
 1. [Services](#services)
     1. [Theory](#service-theory)
     1. [Classes for Service](#classes-for-service)
+1. [Routes](#routes)
 1. [Styles](#styles)
 1. [ES2015 and Tooling](#es2015-and-tooling)
 1. [State management](#state-management)
@@ -56,7 +58,7 @@ Each module in an Angular app is a module component. A module component is the r
 
 ### Module theory
 
-The design in the modules maps directly to our folder structure, which keeps things maintainable and predictable. We should ideally have three high-level modules: root, component and common. The root module defines the base module that bootstraps our app, and the corresponding template. We then import our component and common modules into the root module to include our dependencies. The component and common modules then require lower-level component modules, which contain our components, controllers, services, directives, filters and tests for each reusable feature.
+The design in the modules maps directly to our folder structure, which keeps things maintainable and predictable. The root module defines the base module that bootstraps our app, and the corresponding template. We then import our framework, common, and feature modules into the root module to include our dependencies.
 
 **[Back to top](#table-of-contents)**
 
@@ -81,42 +83,43 @@ export const AppComponent = {
 };
 ```
 
-A root module is then created, with `AppComponent` imported and registered with `.component('app', AppComponent)`. Further imports for submodules (component and common modules) are made to include all components relevant for the application. You'll notice styles are also being imported here, we'll come onto this in later chapters in this guide.
+A root module is then created, with `MyupmcComponent` imported and registered with `.component('myupmc', MyupmcComponent)`. Further imports for submodules (framework, common, and feature modules) are made to include all components relevant for the application.
 
 ```js
-// app.module.js
+// myupmc.module.js
 import angular from 'angular';
 import uiRouter from 'angular-ui-router';
-import { AppComponent } from './app.component';
-import { ComponentsModule } from './components/components.module';
-import { CommonModule } from './common/common.module';
-import './app.scss';
+import { MyupmcComponent } from './myupmc.component';
+import { FrameworkModule } from './_framework/framework.module';
+import { CommonModule } from './_common/common.module';
+import { AppointmentsModule } from './appointments/appointments.module';
 
-export const AppModule = angular
-  .module('app', [
-    ComponentsModule,
+export const MyupmcModule = angular
+  .module('myupmc', [
+    uiRouter,
+    FrameworkModule,
     CommonModule,
-    uiRouter
+    AppointmentsModule
   ])
-  .component('app', AppComponent)
+  .component('myupmc', MyupmcComponent)
   .name;
 ```
 
 **[Back to top](#table-of-contents)**
 
-### Component module
+### Framework module
 
-A Component module is the container reference for all reusable components. See above how we import `ComponentsModule` and inject them into the Root module, this gives us a single place to import all components for the app. These modules we require are decoupled from all other modules and thus can be moved into any other application with ease.
+A Framework module is the container reference for all reusable components and services. Items in Framework should contain no business logic.  See above how we import `FrameworkModule` and inject them into the Root module, this gives us a single place to import all Framework components and services for the app. These modules we require are decoupled from all other modules and thus can be moved into any other application with ease.
 
 ```js
 import angular from 'angular';
-import { CalendarModule } from './calendar/calendar.module';
-import { EventsModule } from './events/events.module';
+import { NotificationModule } from './notification/notification.module';
+import { IconModule } from './icon/icon.module';
 
-export const ComponentsModule = angular
-  .module('app.components', [
-    CalendarModule,
-    EventsModule
+export const FrameworkModule = angular
+  .module('myupmc.framework', [
+    NotificationModule,
+    IconModule
   ])
   .name;
 ```
@@ -129,43 +132,35 @@ The Common module is the container reference for all application specific compon
 
 ```js
 import angular from 'angular';
-import { NavModule } from './nav/nav.module';
-import { FooterModule } from './footer/footer.module';
+import { AllergyModule } from './Allergy/Allergy.module';
 
 export const CommonModule = angular
   .module('app.common', [
-    NavModule,
-    FooterModule
+    AllergyModule
   ])
   .name;
 ```
 
 **[Back to top](#table-of-contents)**
 
-### Low-level modules
+### Feature modules
 
-Low-level modules are individual component modules that contain the logic for each feature block. These will each define a module, to be imported to a higher-level module, such as a component or common module, an example below. Always remember to add the `.name` suffix to each `export` when creating a _new_ module, not when referencing one. You'll noticed routing definitions also exist here, we'll come onto this in later chapters in this guide.
+Feature modules are modules that contain the logic for each feature block. These will each define a module, to be imported to a higher-level module, either to another feature module, or to the root module. Always remember to add the `.name` suffix to each `export` when creating a _new_ module, not when referencing one. You'll noticed routing definitions also exist here, we'll come onto this in later chapters in this guide.
 
 ```js
 import angular from 'angular';
 import uiRouter from 'angular-ui-router';
-import { CalendarComponent } from './calendar.component';
-import './calendar.scss';
+import { AppointmentsComponent } from './appointments.component';
+import { AppointmentsService } from './appointments.service';
+import { AppointmentsRoute } from './appointments.route';
 
-export const CalendarModule = angular
-  .module('calendar', [
+export const AppointmentsModule = angular
+  .module('myupmc.appointments', [
     uiRouter
   ])
-  .component('calendar', CalendarComponent)
-  .config(($stateProvider, $urlRouterProvider) => {
-    'ngInject';
-    $stateProvider
-      .state('calendar', {
-        url: '/calendar',
-        component: 'calendar'
-      });
-    $urlRouterProvider.otherwise('/');
-  })
+  .component('appointments', AppointmentsComponent)
+  .service('appointmentsService', AppointmentsService)
+  .config(AppointmentsRoute)
   .name;
 ```
 
@@ -173,82 +168,94 @@ export const CalendarModule = angular
 
 ### File naming conventions
 
-Keep it simple and lowercase, use the component name, e.g. `calendar.*.js*`, `calendar-grid.*.js` - with the name of the type of file in the middle. Use `*.module.js` for the module definition file, as it keeps it verbose and consistent with Angular.
+Keep it simple and lowerCamelCase, use the component name, e.g. `calendar.*.js*`, `calendarGrid.*.js` - with the name of the type of file in the middle. Use `*.module.js` for the module definition file, as it keeps it verbose and consistent with Angular.
 
 ```
 calendar.module.js
 calendar.component.js
+calendar.component.spec.js
 calendar.service.js
+calendar.service.spec.js
 calendar.directive.js
-calendar.filter.js
-calendar.spec.js
-calendar.html
+calendar.directive.spec.js
+calendar.template.jade
+calendar.route.js
 calendar.scss
 ```
 
 **[Back to top](#table-of-contents)**
-
 ### Scalable file structure
 
 File structure is extremely important, this describes a scalable and predictable structure. An example file structure to illustrate a modular component architecture.
 
 ```
 ├── app/
-│   ├── components/
-│   │  ├── calendar/
-│   │  │  ├── calendar.module.js
-│   │  │  ├── calendar.component.js
-│   │  │  ├── calendar.service.js
-│   │  │  ├── calendar.spec.js
-│   │  │  ├── calendar.html
-│   │  │  ├── calendar.scss
-│   │  │  └── calendar-grid/
-│   │  │     ├── calendar-grid.module.js
-│   │  │     ├── calendar-grid.component.js
-│   │  │     ├── calendar-grid.directive.js
-│   │  │     ├── calendar-grid.filter.js
-│   │  │     ├── calendar-grid.spec.js
-│   │  │     ├── calendar-grid.html
-│   │  │     └── calendar-grid.scss
-│   │  ├── events/
-│   │  │  ├── events.module.js
-│   │  │  ├── events.component.js
-│   │  │  ├── events.directive.js
-│   │  │  ├── events.service.js
-│   │  │  ├── events.spec.js
-│   │  │  ├── events.html
-│   │  │  ├── events.scss
-│   │  │  └── events-signup/
-│   │  │     ├── events-signup.module.js
-│   │  │     ├── events-signup.component.js
-│   │  │     ├── events-signup.service.js
-│   │  │     ├── events-signup.spec.js
-│   │  │     ├── events-signup.html
-│   │  │     └── events-signup.scss
-│   │  └── components.module.js
-│   ├── common/
-│   │  ├── nav/
-│   │  │     ├── nav.module.js
-│   │  │     ├── nav.component.js
-│   │  │     ├── nav.service.js
-│   │  │     ├── nav.spec.js
-│   │  │     ├── nav.html
-│   │  │     └── nav.scss
-│   │  ├── footer/
-│   │  │     ├── footer.module.js
-│   │  │     ├── footer.component.js
-│   │  │     ├── footer.service.js
-│   │  │     ├── footer.spec.js
-│   │  │     ├── footer.html
-│   │  │     └── footer.scss
+│   ├── _common/
+│   │  ├── allergy/
+│   │  │  ├── allergy.module.js
+│   │  │  ├── allergy.component.js
+│   │  │  ├── allergy.component.spec.js
+│   │  │  ├── allergy.service.js
+│   │  │  ├── allergy.service.spec.js
+│   │  │  ├── allergy.template.jade
+│   │  │  ├── allergy.scss
+│   │  │  └── allergy.scss
 │   │  └── common.module.js
-│   ├── app.module.js
-│   ├── app.component.js
-│   └── app.scss
-└── index.html
+│   ├── _framework/
+│   │  ├── components/
+│   │  │     └── notification/
+│   │  │        ├── notification.module.js
+│   │  │        ├── notification.component.js
+│   │  │        ├── notification.component.spec.js
+│   │  │        ├── notification.service.js
+│   │  │        ├── notification.service.spec.js
+│   │  │        ├── notification.template.jade
+│   │  │        └── notification.scss
+│   │  ├── services/
+│   │  │     └── cache/
+│   │  │        ├── cache.module.js
+│   │  │        ├── cache.service.js
+│   │  │        └── cache.service.spec.js
+│   │  └── framework.module.js
+│   ├── appointments/
+│   │  ├── make/
+│   │  │     ├── make.module.js
+│   │  │     ├── make.component.js
+│   │  │     ├── make.component.spec.js
+│   │  │     ├── make.service.js
+│   │  │     ├── make.service.spec.js
+│   │  │     ├── make.template.jade
+│   │  │     ├── make.route.js
+│   │  │     └── make.scss
+│   │  ├── details/
+│   │  │     ├── details.module.js
+│   │  │     ├── details.component.spec.js
+│   │  │     ├── details.component.js
+│   │  │     ├── details.service.js
+│   │  │     ├── details.service.spec.js
+│   │  │     ├── details.template.jade
+│   │  │     ├── details.route.js
+│   │  │     └── details.scss
+│   │  ├── appointments.module.js
+│   │  ├── appointments.component.spec.js
+│   │  ├── appointments.component.js
+│   │  ├── appointments.service.js
+│   │  ├── appointments.service.spec.js
+│   │  ├── appointments.template.jade
+│   │  ├── appointments.route.js
+│   │  └── appointments.scss
+│   ├── myupmc.module.js
+│   ├── myupmc.component.spec.js
+│   ├── myupmc.component.js
+│   ├── myupmc.service.js
+│   ├── myupmc.service.spec.js
+│   ├── myupmc.template.jade
+│   ├── myupmc.route.js
+│   └── myupmc.scss
+└── assets/
 ```
 
-The high level folder structure simply contains `index.html` and `app/`, a directory in which all our root, component, common and low-level modules live along with the markup and styles for each component.
+The high level folder structure `app/`, for all first-party scripts, and `assets/` for 3rd party scripts and other assets such as images.
 
 **[Back to top](#table-of-contents)**
 
@@ -275,6 +282,10 @@ These are the supported properties for `.component()` that you can/should use:
 | transclude | Yes |
 
 **[Back to top](#table-of-contents)**
+
+### Namespacing
+
+Components need to be namespaced to prevent multiple components from having the same name.  All components should begin with `mgl-*`.  Components in feature modules should add additional namespacing.  For example, the `make` component in the `myupmc.appointments.make` module should be named `mgl-appts-make`, with `-appts-` being added since its module is a child of the `myupmc.appointments` module.
 
 ### Controllers
 
@@ -450,101 +461,6 @@ Note how the `<todo-form>` component fetches no state, it simply receives it, mu
 
 **[Back to top](#table-of-contents)**
 
-### Routed components
-
-Let's define what we'd call a "routed component".
-
-* It's essentially a stateful component, with routing definitions
-* No more `router.js` files
-* We use Routed components to define their own routing logic
-* Data "input" for the component is done via the route resolve (optional, still available in the controller with service calls)
-
-For this example, we're going to take the existing `<todo>` component, refactor it to use a route definition and `bindings` on the component which receives data (the secret here with `ui-router` is the `resolve` properties we create, in this case `todoData` directly map across to `bindings` for us). We treat it as a routed component because it's essentially a "view":
-
-```js
-/* ----- todo/todo.component.js ----- */
-import templateUrl from './todo.html';
-
-export const TodoComponent = {
-  bindings: {
-    todoData: '<'
-  },
-  templateUrl,
-  controller: class TodoComponent {
-    constructor() {
-      'ngInject'; // Not actually needed but best practice to keep here incase dependencies needed in the future
-    }
-    $onInit() {
-      this.newTodo = {
-        title: '',
-        selected: false
-      };
-    }
-    $onChanges(changes) {
-      if (changes.todoData) {
-        this.todos = Object.assign({}, this.todoData);
-      }
-    }
-    addTodo({ todo }) {
-      if (!todo) return;
-      this.todos.unshift(todo);
-      this.newTodo = {
-        title: '',
-        selected: false
-      };
-    }
-  }
-};
-
-/* ----- todo/todo.html ----- */
-<div class="todo">
-  <todo-form
-    todo="$ctrl.newTodo"
-    on-add-todo="$ctrl.addTodo($event);"></todo-form>
-  <todo-list
-    todos="$ctrl.todos"></todo-list>
-</div>
-
-/* ----- todo/todo.service.js ----- */
-export class TodoService {
-  constructor($http) {
-    'ngInject';
-    this.$http = $http;
-  }
-  getTodos() {
-    return this.$http.get('/api/todos').then(response => response.data);
-  }
-}
-
-/* ----- todo/todo.module.js ----- */
-import angular from 'angular';
-import uiRouter from 'angular-ui-router';
-import { TodoComponent } from './todo.component';
-import { TodoService } from './todo.service';
-import './todo.scss';
-
-export const TodoModule = angular
-  .module('todo', [
-    uiRouter
-  ])
-  .component('todo', TodoComponent)
-  .service('TodoService', TodoService)
-  .config(($stateProvider, $urlRouterProvider) => {
-    'ngInject';
-    $stateProvider
-      .state('todos', {
-        url: '/todos',
-        component: 'todo',
-        resolve: {
-          todoData: TodoService => TodoService.getTodos()
-        }
-      });
-    $urlRouterProvider.otherwise('/');
-  })
-  .name;
-```
-
-**[Back to top](#table-of-contents)**
 
 # Directives
 
@@ -584,9 +500,9 @@ Due to the fact directives support most of what `.component()` does (template di
 
 **[Back to top](#table-of-contents)**
 
-### Constants or Classes
+### Constants
 
-There are a few ways to approach using ES2015 and directives, either with an arrow function and easier assignment, or using an ES2015 `Class`. Choose what's best for you or your team, keep in mind Angular uses `Class`.
+There are a few ways to approach using ES2015 and directives, either with an arrow function and easier assignment, or using an ES2015 `Class`. We will use arrow functions.
 
 Here's an example using a constant with an Arrow function an expression wrapper `() => ({})` returning an Object literal (note the usage differences inside `.directive()`):
 
@@ -621,43 +537,6 @@ export const TodoModule = angular
   .directive('todoAutofocus', TodoAutoFocus)
   .name;
 ```
-
-Or using ES2015 `Class` (note manually calling `new TodoAutoFocus` when registering the directive) to create the Object:
-
-```js
-/* ----- todo/todo-autofocus.directive.js ----- */
-import angular from 'angular';
-
-export class TodoAutoFocus {
-  constructor($timeout) {
-    'ngInject';
-    this.restrict = 'A';
-    this.$timeout = $timeout;
-  }
-  link($scope, $element, $attrs) {
-    $scope.$watch($attrs.todoAutofocus, (newValue, oldValue) => {
-      if (!newValue) {
-        return;
-      }
-      this.$timeout(() => $element[0].focus());
-    });
-  }
-}
-
-/* ----- todo/todo.module.js ----- */
-import angular from 'angular';
-import { TodoComponent } from './todo.component';
-import { TodoAutofocus } from './todo-autofocus.directive';
-import './todo.scss';
-
-export const TodoModule = angular
-  .module('todo', [])
-  .component('todo', TodoComponent)
-  .directive('todoAutofocus', () => new TodoAutoFocus())
-  .name;
-```
-
-**[Back to top](#table-of-contents)**
 
 # Services
 
@@ -698,11 +577,43 @@ export const TodoModule = angular
 
 **[Back to top](#table-of-contents)**
 
+# Routes
+
+Each feature module should define a route, rather than defining all routes at the top-level feature module.  Like directives, the route should be exported as a fat arrow constant
+
+```js
+/* ----- appointments/appointments.route.js ----- */
+
+export const AppointmentsRoute = ($stateProvider) => {
+  'ngInject';
+
+  $stateProvider.state('appointments', {
+    url: '/appointments',
+    component: 'appointments'
+  });
+};
+
+/* ----- appointments/appointments.module.js ----- */
+
+import angular from 'angular';
+import uiRouter from 'angular-ui-router';
+import { AppointmentsComponent } from './appointments.component';
+import { AppointmentsService } from './appointments.service';
+import { AppointmentsRoute } from './appointments.route';
+
+export const AppointmentsModule = angular
+  .module('myupmc.appointments', [
+    uiRouter
+  ])
+  .component('appointments', AppointmentsComponent)
+  .service('appointmentsService', AppointmentsService)
+  .config(AppointmentsRoute)
+  .name;
+```
+
 # Styles
 
-Using [Webpack](https://webpack.github.io/) we can now use `import` statements on our `.scss` files in our `*.module.js` to let Webpack know to include that file in our stylesheet. Doing this lets us keep our components isolated for both functionality and style; it also aligns more closely to how stylesheets are declared for use in Angular. Doing this won't isolate our styles to just that component like it does with Angular; the styles will still be usable application wide but it is more manageable and makes our applications structure easier to reason about.
-
-If you have some variables or globally used styles like form input elements then these files should still be placed into the root `scss` folder. e.g. `scss/_forms.scss`. These global styles can then be `@imported` into your root module (`app.module.js`) stylesheet like you would normally do.
+TODO
 
 **[Back to top](#table-of-contents)**
 
